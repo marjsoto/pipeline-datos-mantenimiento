@@ -1,0 +1,13 @@
+# Analisis y transformacion de datos
+pandas==2.3.3
+
+# Conexion a PostgreSQL: SQLAlchemy (capa de abstraccion que pandas.read_sql
+# recomienda) + psycopg v3 (driver moderno de Postgres)
+sqlalchemy==2.0.44
+psycopg[binary]==3.2.13
+
+# Carga del archivo .env (mismo rol que dotenv en el Proyecto 1)
+python-dotenv==1.1.1
+
+# Exportar reportes a Excel desde pandas
+openpyxl==3.1.5
