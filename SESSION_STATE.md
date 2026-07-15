@@ -69,16 +69,36 @@ asignado desaparecerían del análisis.)
 └── SESSION_STATE.md
 ```
 
+## DECISIÓN DE ALCANCE IMPORTANTE (acordada con Marcelo, 2026-07-15)
+Marcelo aportó su visión completa de CMMS real (avisos con horas de paro, centros de
+costo con presupuesto, clasificación HML/FSN de repuestos, taxonomía área/línea/sistema/
+subsistema ISO 14224, tipos de técnico mecánico/eléctrico/autónomo/confiabilidad,
+paros clasificados mecánico/eléctrico/operacional/ausentismo, programación semanal de
+producción, KPIs). Acuerdo:
+- Se mantiene la ruta de 5 proyectos como estaba. La visión COMPLETA (workflows:
+  supervisor, checklists autónomos, módulo predictivo) va al Proyecto Integrador.
+- La visión completa se documentará en un ROADMAP.md en el repo del Proyecto 1.
+- REQUISITO INNEGOCIABLE de Marcelo: el portafolio debe mostrar KPIs básicos de
+  mantenimiento Y producción (MTBF, MTTR, disponibilidad, costo por línea, paros por
+  categoría). Para eso se extiende el esquema con un paquete MÍNIMO (sin workflows):
+  tablas `lineas`/`areas`, `paros` (con categoría y responsable según regla: mecánico/
+  eléctrico→técnico, operacional→operador, ausentismo→nadie), `centros_costo`,
+  `programacion_semanal` (solo horas programadas por línea/semana), precio_unitario +
+  clasificación HML/FSN en repuestos, tipo en técnicos, linea_id en equipos.
+  Con datos de prueba realistas para que los KPIs den valores con sentido.
+
 ## Próximo paso
-1. Retomar la pregunta pendiente del LEFT JOIN (arriba) como calentamiento.
-2. Etapa TRANSFORM (`src/transform.py`): métricas de mantenimiento con pandas —
-   órdenes por equipo y por tipo (.groupby), tiempo medio de resolución
-   (fecha_fin - fecha_inicio, ojo con NULLs), consumo de repuestos por tipo de orden,
-   equipos con más correctivos (indicador de "equipo problemático"). Explicar groupby
-   desde cero y dar a Marcelo al menos una métrica como ejercicio guiado.
-3. Etapa LOAD (`src/load.py`): exportar a CSV y Excel en output/ para Power BI.
-4. `src/pipeline.py` como orquestador de las 3 etapas.
-5. Marcelo conecta Power BI manualmente a los archivos generados (él lo hace, no la IA).
+1. Calentamiento: Marcelo responde la pregunta pendiente del LEFT JOIN (arriba).
+2. Escribir ROADMAP.md en el repo del Proyecto 1 (visión CMMS completa de Marcelo con
+   nombres de industria: avisos SAP PM, análisis HML/FSN, ISO 14224, TPM, CBM).
+3. Extensión v2 del esquema (migración SQL en Proyecto 1 `db/`) con el paquete mínimo
+   para KPIs + datos de prueba realistas.
+4. Etapa TRANSFORM (`src/transform.py`) calculando KPIs reales: MTBF, MTTR,
+   disponibilidad (paros vs horas programadas), costo de mtto por línea, cumplimiento
+   de preventivos, consumo de repuestos. Explicar .groupby desde cero; al menos una
+   métrica como ejercicio guiado de Marcelo.
+5. Etapa LOAD (CSV/Excel en output/) + `pipeline.py` orquestador.
+6. Marcelo conecta Power BI manualmente a los archivos generados (él lo hace, no la IA).
 
 ## Pendientes / deuda técnica detectada
 - Ninguna todavía (proyecto recién iniciado).
