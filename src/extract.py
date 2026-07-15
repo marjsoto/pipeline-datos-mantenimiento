@@ -49,18 +49,62 @@ def extraer_repuestos() -> pd.DataFrame:
 
 
 def extraer_uso_repuestos() -> pd.DataFrame:
-    """Consumo de repuestos por orden (tabla puente + JOINs)."""
+    """Consumo de repuestos por orden (tabla puente + JOINs).
+
+    Incluye el precio unitario y la linea del equipo para poder calcular
+    costos de mantenimiento por linea/centro de costo en la etapa transform.
+    """
     query = """
         SELECT orep.orden_id,
                orep.cantidad_usada,
                r.codigo AS repuesto_codigo,
                r.nombre AS repuesto_nombre,
+               r.precio_unitario,
+               cc.codigo AS centro_costo,
                o.tipo   AS orden_tipo,
-               e.codigo AS equipo_codigo
+               e.codigo AS equipo_codigo,
+               l.nombre AS linea
         FROM orden_repuestos orep
         JOIN repuestos r ON orep.repuesto_id = r.id
+        LEFT JOIN centros_costo cc ON r.centro_costo_id = cc.id
         JOIN ordenes_trabajo o ON orep.orden_id = o.id
         JOIN equipos e ON o.equipo_id = e.id
+        LEFT JOIN lineas l ON e.linea_id = l.id
+    """
+    return pd.read_sql(query, engine)
+
+
+def extraer_paros() -> pd.DataFrame:
+    """Paros (downtime) con equipo, linea y responsable segun categoria."""
+    query = """
+        SELECT p.id,
+               p.categoria,
+               p.descripcion,
+               p.fecha_inicio,
+               p.fecha_fin,
+               p.horas_paro,
+               e.codigo AS equipo_codigo,
+               e.criticidad,
+               l.nombre AS linea,
+               t.nombre AS tecnico_nombre,
+               op.nombre AS operador_nombre
+        FROM paros p
+        JOIN equipos e ON p.equipo_id = e.id
+        LEFT JOIN lineas l ON e.linea_id = l.id
+        LEFT JOIN tecnicos t ON p.tecnico_id = t.id
+        LEFT JOIN operadores op ON p.operador_id = op.id
+    """
+    return pd.read_sql(query, engine)
+
+
+def extraer_programacion() -> pd.DataFrame:
+    """Horas programadas de produccion por linea y semana."""
+    query = """
+        SELECT ps.semana_inicio,
+               ps.horas_programadas,
+               l.nombre AS linea
+        FROM programacion_semanal ps
+        JOIN lineas l ON ps.linea_id = l.id
     """
     return pd.read_sql(query, engine)
 
@@ -73,6 +117,8 @@ if __name__ == "__main__":
         ("equipos", extraer_equipos),
         ("repuestos", extraer_repuestos),
         ("uso_repuestos", extraer_uso_repuestos),
+        ("paros", extraer_paros),
+        ("programacion", extraer_programacion),
     ]:
         df = funcion()
         print(f"\n=== {nombre}: {len(df)} filas ===")
