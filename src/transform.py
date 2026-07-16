@@ -112,13 +112,16 @@ def cumplimiento_preventivo(ordenes: pd.DataFrame) -> pd.DataFrame:
     }])
 
 
-# TODO (Marcelo — tu ejercicio, el mas directo de todos):
-# def paros_por_categoria(paros: pd.DataFrame) -> pd.DataFrame:
-#     Agrupa los paros por 'categoria' y devuelve, por cada una:
-#       - eventos: cantidad de paros        -> ('id', 'count')
-#       - horas_totales: suma de horas      -> ('horas_paro', 'sum')
-#     Pista: mira agg_fallas en mttr_mtbf_por_linea — es el mismo patron
-#     groupby + agg + reset_index, sin el filtro previo.
+def paros_por_categoria(paros: pd.DataFrame) -> pd.DataFrame:
+    """Total de eventos y horas de paro por categoria (mecanico/electrico/
+    operacional/ausentismo). El desglose que pidio Marcelo para ver de un
+    vistazo donde se concentra el downtime."""
+    return (
+        paros.groupby('categoria')
+             .agg(eventos=('id', 'count'), horas_totales=('horas_paro', 'sum'))
+             .reset_index()
+             .sort_values('horas_totales', ascending=False)
+    )
 
 
 if __name__ == "__main__":
@@ -145,3 +148,6 @@ if __name__ == "__main__":
 
     print("\n=== Cumplimiento del plan preventivo ===")
     print(cumplimiento_preventivo(extraer_ordenes()).to_string(index=False))
+
+    print("\n=== Paros por categoria ===")
+    print(paros_por_categoria(paros).to_string(index=False))
