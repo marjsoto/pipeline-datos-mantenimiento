@@ -103,14 +103,40 @@ producción, KPIs). Acuerdo:
   en output/ (no versionado). `src/pipeline.py` orquesta E→T→L en un comando.
   Probado end-to-end: 9 órdenes, 14 paros, 14 semanas → 6 KPIs → 7 archivos.
 
+## EXTENSIÓN ESTILO KTB (2026-07-15, tras revisar el KTB real de Marcelo)
+Marcelo compartió el KTB mensual de su planta (PowerPoint, 19 láminas). REGLA ACORDADA:
+se replica el FORMATO, jamás los datos reales (confidencialidad — nombres, costos y
+equipos del archivo NO van al portafolio; los datos del proyecto son 100% inventados).
+Formato aprendido del KTB: cada KPI se grafica con 3 series (Año anterior / AOP / Real)
+mensual + acumulado; puentes/cascadas de costo y horas; Pareto de paros por equipo;
+cumplimiento por tipo de mantenimiento; inventario por rotación FSN y criticidad HML.
+Implementado:
+- Migración 004... no: migración `003_metas_aop.sql` (Proyecto 1): tabla `metas_kpi`
+  (kpi, mes, valor_aop, valor_anio_anterior) — el AOP se carga manual, sin workflow.
+- Seed `003_historia_y_aop.sql`: historia mar-may 2026 (26 semanas programación,
+  6 órdenes completadas, consumos por mes, 13 paros) + 20 metas AOP (mar-jul, con
+  AOP de abril alto por "parada mayor planificada" — así el spike real de abril no
+  es desviación). Nota: hubo un error de SQL en el primer intento (alias equivocado
+  en CROSS JOIN LATERAL) — la transacción hizo ROLLBACK completo y se corrigió.
+- Transform nuevos: `kpi_mensual_vs_aop` (formato LARGO: fila por kpi+mes con
+  real/aop/anio_anterior/desviacion — para líneas 3-series en Power BI, usa .melt),
+  `pareto_paros_por_equipo` (peso_pct + acumulado_pct), `cascada_horas_operadas`
+  (waterfall: programadas → -paros por categoría → operadas, con columna orden).
+- Pipeline actualizado: 9 KPIs, 10 archivos en output/. Verificado con datos:
+  disponibilidad sobre meta todos los meses con tendencia a la baja, MTBF cae bajo
+  meta en julio, Pareto BOMBA-01+MEZCLADORA-01 = 85% (regla 80/20), cascada cuadra.
+
 ## Próximo paso
-1. MARCELO (manual, sin IA): conectar Power BI Desktop a output/ —
-   Obtener datos → Texto/CSV (cada .csv) o Libro de Excel (kpis_mantenimiento.xlsx).
-   Armar un dashboard básico: tarjetas de disponibilidad y MTTR/MTBF, barras de
-   paros por categoría, dona de valor de inventario HML, medidor de cumplimiento.
-2. Cuando el dashboard exista: captura de pantalla al README del Proyecto 2.
-3. Pulir README final del Proyecto 2 y merge develop → main (cierre del proyecto).
-4. Luego: Proyecto 3 (mini-app web CRUD con frontend).
+1. MARCELO (manual, sin IA): conectar Power BI a output/ y armar el dashboard estilo
+   KTB con datos sintéticos:
+   - Líneas 3-series: filtrar kpi_mensual_vs_aop por kpi; mes al eje X; real/aop/
+     anio_anterior como series (así se ve como las láminas de su KTB).
+   - Cascada: visual "Cascada" con cascada_horas_operadas (concepto como categoría,
+     horas como valor, ordenar por columna orden).
+   - Pareto: barras (horas_paro) + línea (acumulado_pct) en eje secundario.
+   - Más las visuales básicas ya listadas antes (tarjetas, dona HML, medidor).
+2. Captura del dashboard al README del Proyecto 2 + merge develop → main (cierre).
+3. Luego: Proyecto 3 (mini-app web CRUD con frontend).
 
 ## Pendientes / deuda técnica detectada
 - Ninguna todavía (proyecto recién iniciado).
