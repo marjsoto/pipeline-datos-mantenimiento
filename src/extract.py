@@ -62,6 +62,7 @@ def extraer_uso_repuestos() -> pd.DataFrame:
                r.precio_unitario,
                cc.codigo AS centro_costo,
                o.tipo   AS orden_tipo,
+               COALESCE(o.fecha_fin, o.created_at) AS fecha,
                e.codigo AS equipo_codigo,
                l.nombre AS linea
         FROM orden_repuestos orep
@@ -107,6 +108,14 @@ def extraer_programacion() -> pd.DataFrame:
         JOIN lineas l ON ps.linea_id = l.id
     """
     return pd.read_sql(query, engine)
+
+
+def extraer_metas() -> pd.DataFrame:
+    """Metas AOP mensuales por KPI (cargadas manualmente en la base)."""
+    return pd.read_sql(
+        "SELECT kpi, mes, valor_aop, valor_anio_anterior FROM metas_kpi",
+        engine,
+    )
 
 
 if __name__ == "__main__":

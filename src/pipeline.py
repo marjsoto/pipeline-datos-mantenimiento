@@ -21,8 +21,10 @@ def main():
     uso_repuestos = extract.extraer_uso_repuestos()
     paros = extract.extraer_paros()
     programacion = extract.extraer_programacion()
+    metas = extract.extraer_metas()
     print(f"   {len(ordenes)} ordenes, {len(paros)} paros, "
-          f"{len(programacion)} semanas programadas, {len(repuestos)} repuestos")
+          f"{len(programacion)} semanas programadas, {len(repuestos)} repuestos, "
+          f"{len(metas)} metas AOP")
 
     print(">> TRANSFORM: calculando KPIs...")
     kpis = {
@@ -32,6 +34,10 @@ def main():
         "costo_repuestos_por_linea": transform.costo_repuestos_por_linea(uso_repuestos),
         "valor_inventario_hml": transform.valor_inventario(repuestos),
         "cumplimiento_preventivo": transform.cumplimiento_preventivo(ordenes),
+        # Estilo KTB: series mensuales Real/AOP/Anio-anterior, Pareto y cascada
+        "kpi_mensual_vs_aop": transform.kpi_mensual_vs_aop(paros, programacion, uso_repuestos, metas),
+        "pareto_paros_por_equipo": transform.pareto_paros_por_equipo(paros),
+        "cascada_horas_operadas": transform.cascada_horas_operadas(paros, programacion),
     }
     print(f"   {len(kpis)} KPIs calculados")
 

@@ -112,6 +112,96 @@ def cumplimiento_preventivo(ordenes: pd.DataFrame) -> pd.DataFrame:
     }])
 
 
+def _mes(fechas: pd.Series) -> pd.Series:
+    """Trunca fechas al primer dia de su mes (para agrupar por mes)."""
+    return pd.to_datetime(fechas).dt.to_period('M').dt.to_timestamp()
+
+
+def kpi_mensual_vs_aop(paros: pd.DataFrame, programacion: pd.DataFrame,
+                       uso_repuestos: pd.DataFrame, metas: pd.DataFrame) -> pd.DataFrame:
+    """El dataset central estilo KTB: por cada KPI y mes, las tres series
+    Real / AOP / Anio anterior — listo para graficos de linea en Power BI.
+
+    Formato "largo" (una fila por kpi+mes) a proposito: en Power BI filtras
+    por kpi y pones mes en el eje, real/aop/anio_anterior como series.
+    """
+    # --- Reales mensuales, cada uno agregado POR SEPARADO (anti fan-out) ---
+    prog = programacion.copy()
+    prog['mes'] = _mes(prog['semana_inicio'])
+    prog_mes = prog.groupby('mes')['horas_programadas'].sum()
+
+    par = paros.copy()
+    par['mes'] = _mes(par['fecha_inicio'])
+    paro_mes = par.groupby('mes')['horas_paro'].sum()
+
+    fallas = par[par['categoria'].isin(['mecanico', 'electrico'])]
+    fallas_mes = fallas.groupby('mes').agg(
+        n_fallas=('id', 'count'), horas_falla=('horas_paro', 'sum'))
+
+    uso = uso_repuestos.copy()
+    uso['mes'] = _mes(uso['fecha'])
+    uso['costo'] = uso['cantidad_usada'] * uso['precio_unitario']
+    gasto_mes = uso.groupby('mes')['costo'].sum()
+
+    # --- Combinar en una tabla por mes y derivar los KPIs ---
+    base = pd.DataFrame({'horas_prog': prog_mes, 'horas_paro': paro_mes}).join(fallas_mes)
+    base['disponibilidad_pct'] = (
+        100 * (base['horas_prog'] - base['horas_paro']) / base['horas_prog']).round(1)
+    base['mttr_horas'] = (base['horas_falla'] / base['n_fallas']).round(2)
+    base['mtbf_horas'] = (
+        (base['horas_prog'] - base['horas_falla']) / base['n_fallas']).round(1)
+    base['gasto_repuestos_usd'] = gasto_mes.round(2)
+
+    # --- A formato largo: una fila por (kpi, mes) con el valor real ---
+    kpis = ['disponibilidad_pct', 'mttr_horas', 'mtbf_horas', 'gasto_repuestos_usd']
+    real_largo = (
+        base[kpis].reset_index()
+                  .melt(id_vars='mes', var_name='kpi', value_name='real')
+    )
+
+    # --- Unir con las metas AOP (LEFT: un mes sin meta cargada igual aparece) ---
+    metas = metas.copy()
+    metas['mes'] = pd.to_datetime(metas['mes'])
+    kpi = real_largo.merge(metas, on=['kpi', 'mes'], how='left')
+    kpi = kpi.rename(columns={'valor_aop': 'aop', 'valor_anio_anterior': 'anio_anterior'})
+    kpi['desviacion_vs_aop'] = (kpi['real'] - kpi['aop']).round(2)
+    return kpi.sort_values(['kpi', 'mes']).reset_index(drop=True)
+
+
+def pareto_paros_por_equipo(paros: pd.DataFrame) -> pd.DataFrame:
+    """Pareto clasico de mantenimiento: que equipos concentran las horas de
+    paro. peso_pct y acumulado_pct permiten la regla 80/20 en Power BI."""
+    pareto = (
+        paros.groupby('equipo_codigo')
+             .agg(eventos=('id', 'count'), horas_paro=('horas_paro', 'sum'))
+             .reset_index()
+             .sort_values('horas_paro', ascending=False)
+    )
+    total = pareto['horas_paro'].sum()
+    pareto['peso_pct'] = (100 * pareto['horas_paro'] / total).round(1)
+    pareto['acumulado_pct'] = pareto['peso_pct'].cumsum().round(1)
+    return pareto
+
+
+def cascada_horas_operadas(paros: pd.DataFrame, programacion: pd.DataFrame) -> pd.DataFrame:
+    """Datos para el grafico de cascada (waterfall) de Power BI:
+    horas programadas -> menos cada categoria de paro -> horas operadas.
+    'orden' define la secuencia de izquierda a derecha en el grafico."""
+    total_prog = programacion['horas_programadas'].sum()
+    por_categoria = paros.groupby('categoria')['horas_paro'].sum()
+
+    filas = [{'concepto': 'Horas programadas', 'horas': round(total_prog, 2), 'orden': 0}]
+    for i, (categoria, horas) in enumerate(
+            por_categoria.sort_values(ascending=False).items(), start=1):
+        filas.append({'concepto': f'Paro {categoria}', 'horas': round(-horas, 2), 'orden': i})
+    filas.append({
+        'concepto': 'Horas operadas',
+        'horas': round(total_prog - por_categoria.sum(), 2),
+        'orden': len(filas),
+    })
+    return pd.DataFrame(filas)
+
+
 def paros_por_categoria(paros: pd.DataFrame) -> pd.DataFrame:
     """Total de eventos y horas de paro por categoria (mecanico/electrico/
     operacional/ausentismo). El desglose que pidio Marcelo para ver de un
