@@ -87,18 +87,30 @@ producción, KPIs). Acuerdo:
   clasificación HML/FSN en repuestos, tipo en técnicos, linea_id en equipos.
   Con datos de prueba realistas para que los KPIs den valores con sentido.
 
+## AVANCE SESIÓN 2026-07-15 (continuación)
+- Pregunta del LEFT JOIN respondida y consolidada (Marcelo eligió bien LEFT JOIN;
+  se afinó el porqué: lo opcional es el vínculo al plan, no el tipo de orden).
+- ROADMAP.md creado en el Proyecto 1 y extensión v2 del esquema aplicada + seed
+  (ver SESSION_STATE del Proyecto 1 para el detalle — incluye lección de fan-out).
+- ETAPA TRANSFORM COMPLETA (`src/transform.py`): 6 KPIs como funciones puras —
+  disponibilidad_por_linea, mttr_mtbf_por_linea (solo fallas técnicas mecanico/
+  electrico), paros_por_categoria (patrón groupby→agg→reset_index→sort_values,
+  explicado a nivel principiante a pedido de Marcelo), costo_repuestos_por_linea,
+  valor_inventario (HML), cumplimiento_preventivo. Regla anti fan-out aplicada:
+  agregar por separado, merge después. Validación cruzada: disponibilidad de pandas
+  coincide exacta con la query SQL de CTEs (L1 816h/14.17h/98.3%).
+- ETAPA LOAD COMPLETA (`src/load.py`): un CSV por KPI + un Excel con hoja por KPI,
+  en output/ (no versionado). `src/pipeline.py` orquesta E→T→L en un comando.
+  Probado end-to-end: 9 órdenes, 14 paros, 14 semanas → 6 KPIs → 7 archivos.
+
 ## Próximo paso
-1. Calentamiento: Marcelo responde la pregunta pendiente del LEFT JOIN (arriba).
-2. Escribir ROADMAP.md en el repo del Proyecto 1 (visión CMMS completa de Marcelo con
-   nombres de industria: avisos SAP PM, análisis HML/FSN, ISO 14224, TPM, CBM).
-3. Extensión v2 del esquema (migración SQL en Proyecto 1 `db/`) con el paquete mínimo
-   para KPIs + datos de prueba realistas.
-4. Etapa TRANSFORM (`src/transform.py`) calculando KPIs reales: MTBF, MTTR,
-   disponibilidad (paros vs horas programadas), costo de mtto por línea, cumplimiento
-   de preventivos, consumo de repuestos. Explicar .groupby desde cero; al menos una
-   métrica como ejercicio guiado de Marcelo.
-5. Etapa LOAD (CSV/Excel en output/) + `pipeline.py` orquestador.
-6. Marcelo conecta Power BI manualmente a los archivos generados (él lo hace, no la IA).
+1. MARCELO (manual, sin IA): conectar Power BI Desktop a output/ —
+   Obtener datos → Texto/CSV (cada .csv) o Libro de Excel (kpis_mantenimiento.xlsx).
+   Armar un dashboard básico: tarjetas de disponibilidad y MTTR/MTBF, barras de
+   paros por categoría, dona de valor de inventario HML, medidor de cumplimiento.
+2. Cuando el dashboard exista: captura de pantalla al README del Proyecto 2.
+3. Pulir README final del Proyecto 2 y merge develop → main (cierre del proyecto).
+4. Luego: Proyecto 3 (mini-app web CRUD con frontend).
 
 ## Pendientes / deuda técnica detectada
 - Ninguna todavía (proyecto recién iniciado).
